@@ -1,0 +1,290 @@
+#include <LiquidCrystal.h>
+
+//-------DEFINICION DE LOS PINES CONECTADOS AL LED-------
+LiquidCrystal lcd(7,6,5,4,3,2);
+
+//-------DEFINICION DE LOS LEDS-------
+#define LED_POSICION_DELANTERA 8
+#define LED_GUINIO_DER 9
+#define LED_GUINIO_IZQ 10
+#define LED_FRENO 11
+#define LED_POSICION_TRASERA 12
+
+//-------DEFINICION DE LOS BOTONES-------
+#define NO_BOTON 0
+#define BOTON_GUINIO_IZQ 1
+#define BOTON_GUINIO_DER 2
+#define BOTON_BALIZAS 3
+#define BOTON_FRENO 4
+#define BOTON_LUCES_POSICION 5
+
+//-------DEFINICION ESTADOS DE GUIÑO-------
+#define APAGADAS 0
+#define GUINIO_IZQUIERDO_ENCENDIDO 1
+#define GUINIO_DERECHO_ENCENDIDO 2
+#define BALIZAS_ENCENDIDAS 3
+
+void setup()
+{
+  for(int i = 8; i<=12; i++) 
+  {
+      pinMode(i, OUTPUT);
+  }
+  Serial.begin(9600);
+  lcd.begin(16,2);
+  lcd.setCursor(0,1);
+  lcd.print("LUCES:");
+}
+
+int botonAntes=0;
+int millisAntes = 0;
+int estadoGuinio=APAGADAS;
+int estadoLucesDePosicion=LOW;
+int estadoParpadeoGuinio=LOW;
+
+void loop()
+{
+  int botonAhora;
+  int lecturaFotoresistor;
+  lecturaFotoresistor=analogRead(A1);  	
+  botonAhora=leerBotones();  
+  
+  if(botonAhora!=NO_BOTON && botonAhora!=botonAntes)
+  {
+      switch(botonAhora)
+      {
+        case BOTON_GUINIO_IZQ: 
+        case BOTON_GUINIO_DER:    
+        case BOTON_BALIZAS:
+        estadoGuinio=estadoLucesGuinio(botonAhora);        
+        break;
+        case BOTON_LUCES_POSICION:
+        estadoLucesDePosicion=!estadoLucesDePosicion;
+        break;
+      } 
+  }  
+  control_lucesGuinio(estadoGuinio);
+  control_lucesDePosicion(lecturaFotoresistor, estadoLucesDePosicion);
+  control_lucesDeFreno(botonAhora);
+  botonAntes=botonAhora;  
+  
+  delay(50);
+}
+
+//---------------------FUNCIONES---------------------
+
+// -------LECTURA BOTONES-------
+int leerBotones()
+{
+  int valorA0=analogRead(A0);
+  int retorno;
+  
+  if(valorA0==1023)
+  {
+    retorno=NO_BOTON;
+  }
+  if(valorA0>500 && valorA0<520)
+  {
+    retorno=BOTON_GUINIO_IZQ;
+  }
+   if(valorA0>680 && valorA0<700)
+  {
+    retorno=BOTON_GUINIO_DER;
+  }
+   if(valorA0>760 && valorA0<780)
+  {
+    retorno=BOTON_BALIZAS;
+  }
+   if(valorA0>810 && valorA0<830)
+  {
+    retorno=BOTON_FRENO;
+  }
+   if(valorA0>850 && valorA0<870)
+  {
+    retorno=BOTON_LUCES_POSICION;
+  }
+  return retorno;  
+}
+
+//------CONTROL LUCES DE FRENO------
+
+void control_lucesDeFreno(int botonAhora)
+{
+  lcd.setCursor(7,0); 
+  if(botonAhora==BOTON_FRENO) 
+  {
+      digitalWrite(LED_FRENO, HIGH);
+      lcd.print("!! ");
+  }
+  else
+  {
+      digitalWrite(LED_FRENO, LOW);
+      lcd.print("  ");
+  }
+  
+}
+//------CONTROL LUCES DE POSICION------
+void control_lucesDePosicion(int valorFotoresistor, int estadoLucesDePosicion)
+{
+  lcd.setCursor(7,1);
+  if(valorFotoresistor > 479)
+  {
+    digitalWrite(LED_POSICION_DELANTERA, !estadoLucesDePosicion);
+    digitalWrite(LED_POSICION_TRASERA, !estadoLucesDePosicion);
+     
+    if(estadoLucesDePosicion==LOW)
+    {
+      	lcd.print("ON ");        
+    }
+    else
+    {
+      	lcd.print("OFF");
+    }
+  }    	    
+  else 
+  { 
+    digitalWrite(LED_POSICION_DELANTERA, estadoLucesDePosicion);
+    digitalWrite(LED_POSICION_TRASERA, estadoLucesDePosicion); 
+    
+    if(estadoLucesDePosicion==HIGH)
+    {
+      	lcd.print("ON ");        
+    }
+    else
+    {     
+      	lcd.print("OFF");	               
+    }    
+  }  
+}
+
+//------CONTROL GUIÑOS------
+
+//---ESTADO LUCES DE GUIÑO---
+int estadoLucesGuinio(int boton)
+{
+  switch(boton)
+  {
+    case BOTON_GUINIO_IZQ:
+    if(estadoGuinio!=GUINIO_IZQUIERDO_ENCENDIDO)
+    {
+      estadoGuinio=GUINIO_IZQUIERDO_ENCENDIDO; 
+    }
+    else
+    {
+      estadoGuinio=APAGADAS;    
+    }
+    break;
+    case BOTON_GUINIO_DER:
+    if(estadoGuinio!=GUINIO_DERECHO_ENCENDIDO)
+    {
+      estadoGuinio=GUINIO_DERECHO_ENCENDIDO; 
+    }
+    else
+    {
+      estadoGuinio=APAGADAS;    
+    }
+    break;
+    case BOTON_BALIZAS:
+    if(estadoGuinio!=BALIZAS_ENCENDIDAS)
+    {
+      estadoGuinio=BALIZAS_ENCENDIDAS; 
+    }
+    else
+    {
+      estadoGuinio=APAGADAS;    
+    }
+    break;    
+  }
+  return estadoGuinio;
+}
+
+//---CONTROL LUCES GUIÑO---
+void control_lucesGuinio(int estadoGuinio)
+{
+  
+  long millisAhora = millis();
+  switch(estadoGuinio)
+  {
+    case APAGADAS:
+    digitalWrite(LED_GUINIO_IZQ, LOW);
+    digitalWrite(LED_GUINIO_DER, LOW);
+    lcd.setCursor(0,0);
+    lcd.print(' ');
+    lcd.setCursor(15,0);
+    lcd.print(' '); 
+    break;
+    
+    case BOTON_GUINIO_IZQ:
+    if(millisAhora - millisAntes>500)
+    {
+      millisAntes = millisAhora;
+      estadoParpadeoGuinio = !estadoParpadeoGuinio;
+    }
+    digitalWrite(LED_GUINIO_IZQ, estadoParpadeoGuinio);
+    digitalWrite(LED_GUINIO_DER, LOW);
+    lcd.setCursor(0,0);
+    if(estadoParpadeoGuinio==HIGH)
+    {
+      lcd.print('<');
+    }
+    else
+    {
+    	lcd.print(' ');
+    }
+    lcd.setCursor(15,0);
+    lcd.print(' ');    
+    break;
+    
+    case BOTON_GUINIO_DER:
+    if(millisAhora - millisAntes>500)
+    {
+      millisAntes = millisAhora;
+      estadoParpadeoGuinio = !estadoParpadeoGuinio;
+    }
+
+    digitalWrite(LED_GUINIO_IZQ, LOW);
+    digitalWrite(LED_GUINIO_DER, estadoParpadeoGuinio);
+    lcd.setCursor(0,0);
+    lcd.print(' ');
+    lcd.setCursor(15,0);
+    if(estadoParpadeoGuinio==HIGH)
+    {
+      lcd.print('>');
+    }
+    else
+    {
+    	lcd.print(' ');
+    }
+    lcd.setCursor(0,0);
+    lcd.print(' ');
+    break;
+    
+    case BOTON_BALIZAS:
+    if(millisAhora - millisAntes>500)
+    {
+      millisAntes = millisAhora;
+      estadoParpadeoGuinio = !estadoParpadeoGuinio;
+    }
+    digitalWrite(LED_GUINIO_IZQ, estadoParpadeoGuinio);
+    digitalWrite(LED_GUINIO_DER, estadoParpadeoGuinio);
+    lcd.setCursor(0,0);
+    if(estadoParpadeoGuinio==HIGH)
+    {
+      lcd.print('<');
+    }
+    else
+    {
+    	lcd.print(' ');
+    }
+    lcd.setCursor(15,0);
+    if(estadoParpadeoGuinio==HIGH)
+    {
+      lcd.print('>');
+    }
+    else
+    {
+    	lcd.print(' ');
+    }
+    break;
+  }
+}
