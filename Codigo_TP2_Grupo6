@@ -1,3 +1,6 @@
+// https://www.tinkercad.com/things/dYRFJUbZV4o
+// GRUPO 6: Brañanova, Ezequiel; Gonzalez, Alfredo; Jimenez, Marcos; Jimenez, Rocio; Justo, Sonia
+
 #include <LiquidCrystal.h>
 
 //-------DEFINICION DE LOS PINES CONECTADOS AL LED-------
